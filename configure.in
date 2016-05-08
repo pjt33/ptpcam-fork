@@ -5,6 +5,8 @@ AC_PREREQ(2.53)
 AM_CONFIG_HEADER([config.h])
 AC_PROG_LIBTOOL
 
+AC_CONFIG_MACRO_DIR([m4])
+
 # library versioning
 # (quoted from libtool doc)
 # 1. Update the version information only immediately before a public release

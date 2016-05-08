@@ -1,0 +1,14 @@
+In the ideal case, it should suffice to run
+
+	autoreconf -is
+	./configure
+	make
+
+However, on some systems this fails because no config.h is generated.
+This appears to be because it would be empty, and a nonexistent file is "good enough" for part of the toolchain.
+The workaround which seems to work is
+
+	autoreconf -is
+	./configure
+	touch config.h
+	make
