@@ -99,6 +99,8 @@ int myusb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int length,
 #define ACT_NIKON_DC2		0x102
 #define ACT_NIKON_IC		0x103
 
+#define ACT_HDR			0x201
+
 /* printing value type */
 #define PTPCAM_PRINT_HEX	00
 #define PTPCAM_PRINT_DEC	01
@@ -143,6 +145,7 @@ void list_files (int busn, int devn, short force);
 void get_file (int busn, int devn, short force, uint32_t handle, char* filename, int overwrite);
 void get_all_files (int busn, int devn, short force, int overwrite);
 void capture_image (int busn, int devn, short force);
+void capture_hdr_image (int busn, int devn, short force);
 void nikon_direct_capture (int busn, int devn, short force, char* filename, int overwrite);
 void nikon_direct_capture2 (int busn, int devn, short force, char* filename, int overwrite);
 void delete_object (int busn, int devn, short force, uint32_t handle);

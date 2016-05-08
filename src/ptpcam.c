@@ -640,8 +640,8 @@ capture_image (int busn, int devn, short force)
 	    if (ret==PTP_RC_OK) ExposureTime=(*(int32_t*)(dpd.CurrentValue))/10;
 	}
 
-	/* adjust USB timeout */
-	if (ExposureTime>USB_TIMEOUT) ptpcam_usb_timeout=ExposureTime;
+	/* adjust USB timeout, leaving some slack for writing the files and sending the events */
+	if (ExposureTime + 2000 > USB_TIMEOUT) ptpcam_usb_timeout = ExposureTime + 2000;
 
 	CR(ptp_initiatecapture (&params, 0x0, 0), "Could not capture.\n");
 	
@@ -667,6 +667,120 @@ capture_image (int busn, int devn, short force)
 err:
 	printf("Events receiving error. Capture status unknown.\n");
 out:
+
+	ptpcam_usb_timeout=USB_TIMEOUT;
+	close_camera(&ptp_usb, &params, dev);
+}
+
+void
+capture_hdr_image (int busn, int devn, short force)
+{
+	PTPParams params;
+	PTP_USB ptp_usb;
+	PTPContainer event;
+	PTPDevicePropDesc dpdExposureComp;
+	int ExposureTime=0;
+	int16_t ExposureBiasCompensation;
+	int16_t TempExposureComp;
+	struct usb_device *dev;
+	int i;
+	short ret;
+
+	printf("\nInitiating capture...\n");
+	if (open_camera(busn, devn, force, &ptp_usb, &params, &dev)<0)
+		return;
+
+	if (!ptp_operation_issupported(&params, PTP_OC_InitiateCapture))
+	{
+	    printf ("Your camera does not support InitiateCapture operation\n");
+	    goto out;
+	}
+
+	if (!ptp_property_issupported(&params, PTP_DPC_ExposureBiasCompensation))
+	{
+	    printf ("Your camera does not support adjusting exposure compensation\n");
+	    goto out;
+	}
+
+	/* Get initial exposure bias comp */
+	memset(&dpdExposureComp,0,sizeof(dpdExposureComp));
+	ret=ptp_getdevicepropdesc(&params,PTP_DPC_ExposureBiasCompensation,&dpdExposureComp);
+	if (ret!=PTP_RC_OK)
+	{
+		printf ("Failed to fetch initial exposure bias; aborting bracketed exposure\n");
+		dpdExposureComp.DataType = PTP_DTC_UNDEF;
+		goto out;
+	}
+	if (dpdExposureComp.GetSet==PTP_DPGS_Get)
+	{
+		printf ("Your camera does not support adjusting exposure compensation; aborting bracketed exposure\n");
+		dpdExposureComp.DataType = PTP_DTC_UNDEF;
+		goto out;
+	}
+	ExposureBiasCompensation=(*(int16_t*)(dpdExposureComp.CurrentValue));
+	if (verbose) printf ("Initial exposure bias: %d\n", ExposureBiasCompensation);
+
+	/* Capture at different exposure biases offset from the initial one */
+	for (i = -2; i <= 2; i++)
+	{
+		/* Set exposure bias */
+		TempExposureComp = ExposureBiasCompensation+i*1000;
+		ret=ptp_setdevicepropvalue(&params, PTP_DPC_ExposureBiasCompensation, &TempExposureComp, PTP_DTC_INT16);
+		if (ret!=PTP_RC_OK)
+		{
+			printf ("Failed to set exposure bias %d; skipping\n", i);
+			continue;
+		}
+
+		/* obtain exposure time in milliseconds */
+		if (ptp_property_issupported(&params, PTP_DPC_ExposureTime))
+		{
+			PTPDevicePropDesc dpd;
+			memset(&dpd,0,sizeof(dpd));
+			ret=ptp_getdevicepropdesc(&params,PTP_DPC_ExposureTime,&dpd);
+			if (ret==PTP_RC_OK) ExposureTime=(*(int32_t*)(dpd.CurrentValue))/10;
+		}
+
+		/* adjust USB timeout, leaving some slack for writing the files and sending the events */
+		if (ExposureTime + 2000 > USB_TIMEOUT) ptpcam_usb_timeout = ExposureTime + 2000;
+
+		CR(ptp_initiatecapture (&params, 0x0, 0), "Could not capture.\n");
+
+		ret=ptp_usb_event_wait(&params,&event);
+		if (ret!=PTP_RC_OK) goto err;
+		if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
+		if (event.Code==PTP_EC_CaptureComplete) {
+			printf ("Camera reported 'capture completed' but the object information is missing.\n");
+			goto out;
+		}
+
+		while (event.Code==PTP_EC_ObjectAdded) {
+			printf ("Object added 0x%08lx\n", (long unsigned) event.Param1);
+			if (ptp_usb_event_wait(&params, &event)!=PTP_RC_OK)
+			{
+				printf ("Error waiting for event. Capture status unknown.\n");
+				break;
+			}
+			if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
+			if (event.Code==PTP_EC_CaptureComplete) {
+				printf ("Capture completed successfully!\n");
+				break;
+			}
+		}
+	}
+
+	goto out;
+
+err:
+	printf ("Error waiting for event. Capture status unknown.\n");
+out:
+
+	/* Attempt to reset the exposure comp to the initial value */
+	if (dpdExposureComp.DataType != PTP_DTC_UNDEF)
+	{
+		ret=ptp_setdevicepropvalue(&params, PTP_DPC_ExposureBiasCompensation, &ExposureBiasCompensation, PTP_DTC_INT16);
+		if (ret!=PTP_RC_OK) printf ("Failed to restore initial exposure bias compensation\n");
+	}
 
 	ptpcam_usb_timeout=USB_TIMEOUT;
 	close_camera(&ptp_usb, &params, dev);
@@ -2121,6 +2235,7 @@ main(int argc, char ** argv)
 		{"get-file",1,0,'g'},
 		{"get-all-files",0,0,'G'},
 		{"capture",0,0,'c'},
+		{"hdr",0,0,'H'},
 		{"nikon-dc",0,0,0},
 		{"ndc",0,0,0},
 		{"nikon-ic",0,0,0},
@@ -2228,6 +2343,9 @@ main(int argc, char ** argv)
 		case 'c':
 			action=ACT_CAPTURE;
 			break;
+		case 'H':
+			action=ACT_HDR;
+			break;
 		case 'L':
 			action=ACT_LIST_FILES;
 			break;
@@ -2306,6 +2424,9 @@ main(int argc, char ** argv)
 			break;
 		case ACT_CAPTURE:
 			capture_image(busn,devn,force);
+			break;
+		case ACT_HDR:
+			capture_hdr_image(busn,devn,force);
 			break;
 		case ACT_DELETE_OBJECT:
 			delete_object(busn,devn,force,handle);
