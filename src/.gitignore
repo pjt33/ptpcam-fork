@@ -1,0 +1,13 @@
+*.gch
+*.la
+*.lo
+*.o
+
+.deps
+.libs
+
+Makefile
+Makefile.in
+libptp-endian.h
+libptp-stdint.h
+ptpcam
