@@ -486,6 +486,7 @@ open_camera (int busn, int devn, short force, PTP_USB *ptp_usb, PTPParams *param
 		close_usb(ptp_usb, *dev);
 		return -1;
 	}
+	hack_deviceinfo(&params->deviceinfo, *dev);
 	return 0;
 }
 
@@ -497,6 +498,42 @@ close_camera (PTP_USB *ptp_usb, PTPParams *params, struct usb_device *dev)
 	close_usb(ptp_usb, dev);
 }
 
+const static uint16_t nikon_d40_hidden_props[] = {
+	0xd017, 0xd018, 0xd019, 0xd01a, 0xd01b, 0xd01c, 0xd01d, 0xd01f,
+	0xd025, 0xd026, 0xd02a, 0xd02b, 0xd02c, 0xd02d,
+	0xd045,
+	0xd054, 0xd05e, 0xd05f,
+	0xd062, 0xd063, 0xd064, 0xd065, 0xd066, 0xd06b, 0xd06c,
+	0xd084, 0xd08a,
+	0xd090, 0xd091, 0xd092,
+	0xd0e0, 0xd0e1, 0xd0e2, 0xd0e3, 0xd0e4, 0xd0e5, 0xd0e6,
+	0xd100, 0xd101, 0xd102, 0xd103, 0xd104, 0xd105, 0xd108, 0xd109, 0xd10b, 0xd10d, 0xd10e,
+	0xd120, 0xd121, 0xd122, 0xd124, 0xd125, 0xd126,
+	0xd140, 0xd142,
+	0xd160, 0xd161, 0xd163, 0xd164, 0xd165, 0xd167, 0xd16a, 0xd16b, 0xd16d,
+	0xd183,
+	0xd1b0, 0xd1b1, 0xd1b2,
+	0xd1c0, 0xd1c1,
+	0xd1e0, 0xd1e1
+};
+
+void
+hack_deviceinfo(PTPDeviceInfo* deviceinfo, struct usb_device* dev)
+{
+	int i;
+
+	if (deviceinfo->VendorExtensionID==PTP_VENDOR_MICROSOFT &&
+	    dev->descriptor.idVendor==0x4b0 &&
+	    dev->descriptor.idProduct==0x414)
+	{
+		deviceinfo->VendorExtensionID = PTP_VENDOR_NIKON;
+		deviceinfo->DevicePropertiesSupported = realloc(deviceinfo->DevicePropertiesSupported,deviceinfo->DevicePropertiesSupported_len*sizeof(uint16_t) + sizeof(nikon_d40_hidden_props));
+		for (i = 0; i < sizeof(nikon_d40_hidden_props)/sizeof(uint16_t); i++) {
+			deviceinfo->DevicePropertiesSupported[deviceinfo->DevicePropertiesSupported_len] = nikon_d40_hidden_props[i];
+			deviceinfo->DevicePropertiesSupported_len++;
+		}
+	}
+}
 
 void
 list_devices(short force)

@@ -125,7 +125,7 @@ static struct {
 };
 /**
  * Properties reported by Corey Manders and Mehreen Chaudary, revised for
- * D70 by Mariusz Woloszyn
+ * D70 by Mariusz Woloszyn, and for D40 by Peter Taylor
  **/
 static struct {
 	uint16_t dpc;
@@ -145,6 +145,9 @@ static struct {
 	{PTP_DPC_NIKON_WhiteBalanceCloudyBias, N_("NIKON White Balance Cloudy Bias")},
 	{PTP_DPC_NIKON_WhiteBalanceShadeBias, N_("NIKON White Balance Shade Bias")},
 	{PTP_DPC_NIKON_WhiteBalanceColorTemperature, N_("NIKON White Balance Color Temperature")},
+	{PTP_DPC_NIKON_WhiteBalancePresetNumber, N_("NIKON White Balance Preset Number")},
+	{PTP_DPC_NIKON_WhiteBalancePreset0, N_("NIKON White Balance Preset Value 0")},
+	{PTP_DPC_NIKON_WhiteBalancePreset1, N_("NIKON White Balance Preset Value 1")},
 	{PTP_DPC_NIKON_ImageSharpening, N_("NIKON Image Sharpening")},
 	{PTP_DPC_NIKON_ToneCompensation, N_("NIKON Tone Compensation")},
 	{PTP_DPC_NIKON_ColorMode,	N_("NIKON Color Mode")},
@@ -156,6 +159,7 @@ static struct {
 	{PTP_DPC_NIKON_MenuBankNameB,	N_("NIKON Menu Bank Name B")},	
 	{PTP_DPC_NIKON_MenuBankNameC,	N_("NIKON Menu Bank Name C")},
 	{PTP_DPC_NIKON_MenuBankNameD,	N_("NIKON Menu Bank Name D")},
+	{PTP_DPC_NIKON_ResetMenuBank,	N_("NIKON Reset Menu Bank")},
 	{PTP_DPC_NIKON_A1AFCModePriority, N_("NIKON (A1) AFC Mode Priority")},
 	{PTP_DPC_NIKON_A2AFSModePriority, N_("NIKON (A2) AFS Mode Priority")},
 	{PTP_DPC_NIKON_A3GroupDynamicAF, N_("NIKON (A3) Group Dynamic AF")},
@@ -179,6 +183,7 @@ static struct {
 	{PTP_DPC_NIKON_D1ShootingSpeed, N_("NIKON (D1) Shooting Speed")},
 	{PTP_DPC_NIKON_ExposureTime, N_("NIKON Exposure Time")},
 	{PTP_DPC_NIKON_ACPower, N_("NIKON AC Power")},
+	{PTP_DPC_NIKON_Warning, N_("NIKON Warning")},
 	{PTP_DPC_NIKON_D2MaximumShots, N_("NIKON (D2) Maximum Shots")},
 	{PTP_DPC_NIKON_D3ExpDelayMode,	N_("NIKON (D3) ExpDelayMode")},	
 	{PTP_DPC_NIKON_LongExposureNoiseReduction, N_("NIKON Long Exposure Noise Reduction")},
@@ -213,7 +218,10 @@ static struct {
 	{PTP_DPC_NIKON_WhiteBalanceBracketStep, N_("NIKON White Balance Bracket Step")},
 	{PTP_DPC_NIKON_AutofocusLCDTopMode2, N_("NIKON Autofocus LCD Top Mode 2")},
 	{PTP_DPC_NIKON_AutofocusArea, N_("NIKON Autofocus Area selector")},
+	{PTP_DPC_NIKON_FlexibleProgram, N_("NIKON Flexible Program")},
 	{PTP_DPC_NIKON_LightMeter,	N_("NIKON Light Meter")},
+	{PTP_DPC_NIKON_RecordingMedia,	N_("NIKON Recording Media")},
+	{PTP_DPC_NIKON_CCDSerial,	N_("NIKON CCD Serial")},
 	{PTP_DPC_NIKON_ExposureApertureLock, N_("NIKON Exposure Aperture Lock")},
 	{PTP_DPC_NIKON_MaximumShots,	N_("NIKON Maximum Shots")},
 	{PTP_DPC_NIKON_AFLLock, N_("NIKON AF-L Locked")},
@@ -236,13 +244,21 @@ static struct {
         {PTP_DPC_NIKON_ImageCommentAttach, N_("NIKON Image Comment Attach")},
         {PTP_DPC_NIKON_FlashOpen, N_("NIKON Flash Open")},
         {PTP_DPC_NIKON_FlashCharged, N_("NIKON Flash Charged")},
+        {PTP_DPC_NIKON_ExternalFlashAttached, N_("NIKON External Flash Attached")},
+        {PTP_DPC_NIKON_ExternalFlashStatus, N_("NIKON External Flash Status")},
+        {PTP_DPC_NIKON_ExternalFlashSort, N_("NIKON External Flash Sort")},
+        {PTP_DPC_NIKON_ExternalFlashCompensation, N_("NIKON External Flash Compensation")},
+        {PTP_DPC_NIKON_ExternalFlashMode, N_("NIKON External Flash Mode")},
         {PTP_DPC_NIKON_LensID, N_("NIKON Lens ID")},
+        {PTP_DPC_NIKON_LensSort, N_("NIKON Lens Sort")},
+        {PTP_DPC_NIKON_LensType, N_("NIKON Lens Type")},
         {PTP_DPC_NIKON_FocalLengthMin, N_("NIKON Min. Focal Length")},
         {PTP_DPC_NIKON_FocalLengthMax, N_("NIKON Max. Focal Length")},
         {PTP_DPC_NIKON_MaxApAtMinFocalLength, N_("NIKON Max. Aperture at Min. Focal Length")},
         {PTP_DPC_NIKON_MaxApAtMaxFocalLength, N_("NIKON Max. Aperture at Max. Focal Length")},
         {PTP_DPC_NIKON_LowLight, N_("NIKON Low Light Indicator")},
         {PTP_DPC_NIKON_CSMMenu, N_("NIKON CSM Menu")},
+        {PTP_DPC_NIKON_ISOAutoHighLimit, N_("NIKON ISO Auto High Limit")},
         {PTP_DPC_NIKON_OptimizeImage, N_("NIKON Optimize Image")},
         {PTP_DPC_NIKON_AutoExposureLock, N_("NIKON AE Lock")},
         {PTP_DPC_NIKON_AutoFocusLock, N_("NIKON AF Lock")},
