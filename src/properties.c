@@ -44,10 +44,6 @@
 #endif
 
 #define SVALLEN		256
-#define SVALRET(s) { \
-			if (n>=SVALLEN) s[SVALLEN]='\0'; \
-			return s;\
-}
 
 int
 ptp_property_issupported(PTPParams* params, uint16_t property)
@@ -332,10 +328,9 @@ ptp_prop_NIKON_d100(PTPParams* params, PTPDevicePropDesc *dpd, char* strval)
 	uint32_t val= (uint32_t) strtol (strval, NULL, 10);
 	uint16_t numerator=(uint16_t) (val >> 16);
 	uint16_t denominator=(uint16_t) val;
-	int n;
 
-	n=snprintf(strvalret,SVALLEN,"%i/%i",numerator, denominator);
-	SVALRET(strvalret);
+	snprintf(strvalret,SVALLEN,"%i/%i",numerator, denominator);
+	return strvalret;
 }
 
 static const char*
@@ -344,7 +339,7 @@ ptp_prop_getdescscale10000(PTPParams* params, PTPDevicePropDesc *dpd, char* strv
 	long long int value=strtoll(strval, NULL, 10);
 	double floatvalue=(double) value/(double )10000.0;
 	static char strvalret[SVALLEN];
-	int i,n;
+	int i;
 	static struct {
 		uint16_t dpc;
 		const char *units;
@@ -362,8 +357,8 @@ ptp_prop_getdescscale10000(PTPParams* params, PTPDevicePropDesc *dpd, char* strv
 	//RETPROPDESC(pd);
 	for (i=0; prop_units[i].dpc!=0; i++)	{ 
 		if (prop_units[i].dpc==dpd->DevicePropertyCode) {
-			n=snprintf(strvalret,SVALLEN,"%.4f%s",floatvalue,prop_units[i].units);
-			SVALRET(strvalret);
+			snprintf(strvalret,SVALLEN,"%.4f%s",floatvalue,prop_units[i].units);
+			return strvalret;
 		}
 	}
 	return NULL;
@@ -375,7 +370,7 @@ ptp_prop_getdescscale1000(PTPParams* params, PTPDevicePropDesc *dpd, char* strva
 	long long int value=strtoll(strval, NULL, 10);
 	double floatvalue=(double) value/(double )1000.0;
 	static char strvalret[SVALLEN];
-	int i,n;
+	int i;
 	static struct {
 		uint16_t dpc;
 		const char *units;
@@ -396,10 +391,10 @@ ptp_prop_getdescscale1000(PTPParams* params, PTPDevicePropDesc *dpd, char* strva
 	case PTP_VENDOR_NIKON:
 		for (i=0; prop_units_NIKON[i].dpc!=0; i++)	{ 
 			if (prop_units_NIKON[i].dpc==dpd->DevicePropertyCode){
-				n=snprintf(strvalret,SVALLEN,"%.*f%s",
+				snprintf(strvalret,SVALLEN,"%.*f%s",
 					prop_units_NIKON[i].prec,floatvalue,
 					prop_units_NIKON[i].units);
-				SVALRET(strvalret);
+				return strvalret;
 			}
 		}
 			break;
@@ -408,10 +403,10 @@ ptp_prop_getdescscale1000(PTPParams* params, PTPDevicePropDesc *dpd, char* strva
 
 	for (i=0; prop_units[i].dpc!=0; i++)	{ 
 		if (prop_units[i].dpc==dpd->DevicePropertyCode) {
-			n=snprintf(strvalret,SVALLEN,"%.*f%s",
+			snprintf(strvalret,SVALLEN,"%.*f%s",
 				prop_units[i].prec,floatvalue,
 				prop_units[i].units);
-			SVALRET(strvalret);
+			return strvalret;
 		}
 	}
 	return NULL;
@@ -423,7 +418,7 @@ ptp_prop_getdescscale100(PTPParams* params, PTPDevicePropDesc *dpd, char* strval
 	long long int value=strtoll(strval, NULL, 10);
 	double floatvalue=(double) value/(double )100.0;
 	static char strvalret[SVALLEN];
-	int i,n;
+	int i;
 	static struct {
 		uint16_t dpc;
 		const char *units;
@@ -449,10 +444,10 @@ ptp_prop_getdescscale100(PTPParams* params, PTPDevicePropDesc *dpd, char* strval
 	case PTP_VENDOR_NIKON:
 		for (i=0; prop_units_NIKON[i].dpc!=0; i++)	{ 
 			if (prop_units_NIKON[i].dpc==dpd->DevicePropertyCode){
-				n=snprintf(strvalret,SVALLEN,"%.*f%s",
+				snprintf(strvalret,SVALLEN,"%.*f%s",
 					prop_units_NIKON[i].prec,floatvalue,
 					prop_units_NIKON[i].units);
-				SVALRET(strvalret);
+				return strvalret;
 			}
 		}
 			break;
@@ -460,10 +455,10 @@ ptp_prop_getdescscale100(PTPParams* params, PTPDevicePropDesc *dpd, char* strval
 
 	for (i=0; prop_units[i].dpc!=0; i++)	{ 
 		if (prop_units[i].dpc==dpd->DevicePropertyCode) {
-			n=snprintf(strvalret,SVALLEN,"%.*f%s",
+			snprintf(strvalret,SVALLEN,"%.*f%s",
 				prop_units[i].prec,floatvalue,
 				prop_units[i].units);
-			SVALRET(strvalret);
+			return strvalret;
 		}
 	}
 	return NULL;
@@ -853,33 +848,32 @@ const char *
 ptp_prop_tostr (PTPParams* params, PTPDevicePropDesc *dpd, void *val)
 {
 	static char strval[SVALLEN];
-	int n;
 	void *value=val==NULL?dpd->CurrentValue:val;
 
 	memset(&strval, 0, SVALLEN);
 
 	switch (dpd->DataType) {
 		case PTP_DTC_INT8:
-			n=snprintf(strval,SVALLEN,"%hhi",*(char*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%hhi",*(char*)value);
+			return strval;
 		case PTP_DTC_UINT8:
-			n=snprintf(strval,SVALLEN,"%hhu",*(unsigned char*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%hhu",*(unsigned char*)value);
+			return strval;
 		case PTP_DTC_INT16:
-			n=snprintf(strval,SVALLEN,"%hi",*(int16_t*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%hi",*(int16_t*)value);
+			return strval;
 		case PTP_DTC_UINT16:
-			n=snprintf(strval,SVALLEN,"%hu",*(uint16_t*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%hu",*(uint16_t*)value);
+			return strval;
 		case PTP_DTC_INT32:
-			n=snprintf(strval,SVALLEN,"%li",(long int)*(int32_t*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%li",(long int)*(int32_t*)value);
+			return strval;
 		case PTP_DTC_UINT32:
-			n=snprintf(strval,SVALLEN,"%lu",(unsigned long)*(uint32_t*)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"%lu",(unsigned long)*(uint32_t*)value);
+			return strval;
 		case PTP_DTC_STR:
-			n=snprintf(strval,SVALLEN,"\"%s\"",(char *)value);
-			SVALRET(strval);
+			snprintf(strval,SVALLEN,"\"%s\"",(char *)value);
+			return strval;
 	}
 	return NULL;
 }
