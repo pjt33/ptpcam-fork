@@ -168,6 +168,5 @@ int usb_get_endpoint_status(PTP_USB* ptp_usb, int ep, uint16_t* status);
 int usb_clear_stall_feature(PTP_USB* ptp_usb, int ep);
 int open_camera (int busn, int devn, short force, PTP_USB *ptp_usb, PTPParams *params, struct usb_device **dev);
 void close_camera (PTP_USB *ptp_usb, PTPParams *params, struct usb_device *dev);
-void hack_deviceinfo(PTPDeviceInfo* deviceinfo, struct usb_device* dev);
 
 #endif /* __PTPCAM_H__ */
