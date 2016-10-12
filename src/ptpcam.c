@@ -1015,27 +1015,29 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 		}
 
 		printf("Event [%i] = 0x%04x,\t param: %08x\n",i, events[i].code ,events[i].param1);
+		uint32_t handle = events[i].param1;
+		if (handle == 0) handle = 0xffff0001; /* for old Nikon */
 		if (events[i].code==PTP_EC_NIKON_CaptureOverflow) {
 		    printf("Ram cache overflow? Shooting to fast!\n");
-		    if ((result=ptp_getobjectinfo(&params,0xffff0001, &oi))!=PTP_RC_OK) {
+		    if ((result=ptp_getobjectinfo(&params,handle, &oi))!=PTP_RC_OK) {
 		        fprintf(stderr, "Could not get object info\n");
 		        ptp_perror(&params,result);
 		        goto out;
 		    }
 		    if (filename==NULL) filename=oi.Filename;
-		    save_object(&params, 0xffff0001, filename, oi, overwrite);
+		    save_object(&params, handle, filename, oi, overwrite);
 		    BurstNumber=0;
 		    usleep(100);
 		} else
 		if (events[i].code==PTP_EC_NIKON_ObjectReady) 
 		{
-		    if ((result=ptp_getobjectinfo(&params,0xffff0001, &oi))!=PTP_RC_OK) {
+		    if ((result=ptp_getobjectinfo(&params, handle, &oi))!=PTP_RC_OK) {
 		        fprintf(stderr, "Could not get object info\n");
 		        ptp_perror(&params,result);
 		        goto out;
 		    }
 		    if (filename==NULL) filename=oi.Filename;
-		    save_object(&params, 0xffff0001, filename, oi, overwrite);
+		    save_object(&params, handle, filename, oi, overwrite);
 		    BurstNumber--;
 		}
 	    }
