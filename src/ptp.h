@@ -183,6 +183,7 @@ typedef struct _PTPUSBEventContainer PTPUSBEventContainer;
 #define PTP_OC_NIKON_SetControlMode	0x90C2
 #define PTP_OC_NIKON_CheckEvent		0x90C7
 #define PTP_OC_NIKON_KeepAlive		0x90C8
+#define PTP_OC_NIKON_GetVendorPropCodes	0x90CA	/* 0 params, data in: hack from libgphoto2 */
 
 /* Proprietary vendor extension operations mask */
 #define PTP_OC_EXTENSION_MASK		0xF000
@@ -796,6 +797,8 @@ struct _PTPParams {
 };
 
 /* last, but not least - ptp functions */
+uint16_t ptp_transaction (PTPParams* params, PTPContainer* ptp,
+			uint16_t flags, unsigned int sendlen, char** data);
 uint16_t ptp_usb_sendreq	(PTPParams* params, PTPContainer* req);
 uint16_t ptp_usb_senddata	(PTPParams* params, PTPContainer* ptp,
 				unsigned char *data, unsigned int size);
@@ -806,6 +809,7 @@ uint16_t ptp_usb_event_check	(PTPParams* params, PTPContainer* event);
 uint16_t ptp_usb_event_wait		(PTPParams* params, PTPContainer* event);
 
 uint16_t ptp_getdeviceinfo	(PTPParams* params, PTPDeviceInfo* deviceinfo);
+uint16_t ptp_fixup_deviceinfo (PTPParams* params, PTPDeviceInfo* deviceinfo, int idVendor);
 
 uint16_t ptp_opensession	(PTPParams *params, uint32_t session);
 uint16_t ptp_closesession	(PTPParams *params);
@@ -895,6 +899,7 @@ uint16_t ptp_nikon_directcapture (PTPParams* params, uint32_t unknown);
 uint16_t ptp_nikon_checkevent (PTPParams* params,
 				PTPUSBEventContainer** event, uint16_t* evnum);
 uint16_t ptp_nikon_keepalive (PTPParams* params);
+uint16_t ptp_nikon_get_vendorpropcodes (PTPParams* params, uint16_t **props, unsigned int *size);
 
 
 /* Non PTP protocol functions */

@@ -405,6 +405,72 @@ ptp_usb_event_wait (PTPParams* params, PTPContainer* event) {
  * in host byte order!
  **/
 
+/**
+ * ptp_nikon_get_vendorpropcodes:
+ *
+ * [[hack from libgphoto2]]
+ *
+ * This command downloads the vendor specific property codes.
+ *
+ * params:	PTPParams*
+ *
+ * Return values: Some PTP_RC_* code.
+ *      unsigned char **data - pointer to data pointer
+ *      unsigned int  *size - size of data returned
+ *
+ **/
+uint16_t
+ptp_nikon_get_vendorpropcodes (PTPParams* params, uint16_t **props, unsigned int *size)
+{
+	PTPContainer	ptp;
+	char	*data = NULL;
+
+	*props = NULL;
+	*size = 0;
+	PTP_CNT_INIT(ptp);
+	ptp.Code=PTP_OC_NIKON_GetVendorPropCodes;
+	ptp.Nparam=0;
+	CHECK_PTP_RC(ptp_transaction(params, &ptp, PTP_DP_GETDATA, 0, &data));
+	*size = ptp_unpack_uint16_t_array(params,data,0,props);
+	free (data);
+	return PTP_RC_OK;
+}
+
+/**
+ * ptp_fixup_deviceinfo:
+ *
+ * [[hack from libgphoto2]]
+ *
+ * fixup VendorExtensionID, support vendor specific properties
+ **/
+uint16_t
+ptp_fixup_deviceinfo (PTPParams* params, PTPDeviceInfo* deviceinfo, int idVendor)
+{
+	ptp_debug(params,"PTP: fixup DeviceInfo");
+
+	if (deviceinfo->VendorExtensionID==PTP_VENDOR_MICROSOFT && idVendor==0x4b0) {
+		deviceinfo->VendorExtensionID = PTP_VENDOR_NIKON;
+		if (ptp_operation_issupported(params, PTP_OC_NIKON_GetVendorPropCodes)) {
+			uint16_t	*xprops = NULL;
+			unsigned int	xsize;
+			CHECK_PTP_RC(ptp_nikon_get_vendorpropcodes(params, &xprops, &xsize));
+			unsigned int	oldsize = deviceinfo->DevicePropertiesSupported_len;
+			unsigned int	newsize = oldsize + xsize;
+			uint16_t	*newprops = realloc(deviceinfo->DevicePropertiesSupported, sizeof(newprops[0]) * newsize);
+			if (newprops != NULL) {
+				unsigned int i;
+				for (i = oldsize; i < newsize; ++i) {
+					newprops[i] = xprops[i-oldsize];
+					deviceinfo->DevicePropertiesSupported_len++;
+				}
+				deviceinfo->DevicePropertiesSupported = newprops;
+			}
+			free(xprops);
+		}
+	}
+	/**@TODO: else if PTP_VENDOR_CANON etc... */
+	return PTP_RC_OK;
+}
 
 /**
  * ptp_getdeviceinfo:
@@ -1694,6 +1760,7 @@ ptp_get_operation_name(PTPParams* params, uint16_t oc)
 		{PTP_OC_NIKON_SetControlMode,	N_("NIKON SetControlMode")},
 		{PTP_OC_NIKON_CheckEvent,	N_("NIKON Check Event")},
 		{PTP_OC_NIKON_KeepAlive,	N_("NIKON Keep Alive (?)")},
+		{PTP_OC_NIKON_GetVendorPropCodes,	N_("NIKON GetVendorPropCodes")},
 		{0,NULL}
 	};
 
