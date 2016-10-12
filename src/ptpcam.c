@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 #include <getopt.h>
 #include <unistd.h>
 #include <signal.h>
@@ -872,6 +873,8 @@ err:
 	close_camera(&ptp_usb, &params, dev);
 }
 
+void
+nikon_initiate_dc (int busn, int devn, short force);
 void
 nikon_initiate_dc (int busn, int devn, short force)
 {
@@ -2123,7 +2126,8 @@ ptp_transaction_senddata (PTPParams* params, PTPContainer* ptp, unsigned int sen
 	return (ptp_transaction(params, ptp, PTP_DP_SENDDATA, sendlen, &data));
 }
 
-void ptphack()
+void ptphack(void);
+void ptphack(void)
 {
 	PTPParams params={};
 	PTP_USB ptp_usb={};

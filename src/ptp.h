@@ -797,6 +797,8 @@ struct _PTPParams {
 };
 
 /* last, but not least - ptp functions */
+uint16_t ptp_transaction (PTPParams* params, PTPContainer* ptp,
+			uint16_t flags, unsigned int sendlen, char** data);
 uint16_t ptp_usb_sendreq	(PTPParams* params, PTPContainer* req);
 uint16_t ptp_usb_senddata	(PTPParams* params, PTPContainer* ptp,
 				unsigned char *data, unsigned int size);
