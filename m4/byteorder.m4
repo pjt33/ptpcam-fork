@@ -218,10 +218,12 @@ if test "$HAVE_LE32TOH" != "1"; then
 /* Define aliases for the standard byte swapping macros */
 /* Arguments to these macros must be properly aligned on natural word */
 /* boundaries in order to work properly on all architectures */
+#ifndef htobe16
 #define htobe16(x) htons(x)
 #define htobe32(x) htonl(x)
 #define be16toh(x) ntohs(x)
 #define be32toh(x) ntohl(x)
+#endif
 
 #define HTOBE16(x) (x) = htobe16(x)
 #define HTOBE32(x) (x) = htobe32(x)
@@ -268,8 +270,10 @@ EOF
 #define LE64TOH(x)      (void) (x)
 
 /* These don't have standard aliases */
+#ifndef htobe64
 #define htobe64(x)      swap64(x)
 #define be64toh(x)      swap64(x)
+#endif
 
 #define HTOBE64(x)      (x) = htobe64(x)
 #define BE64TOH(x)      (x) = be64toh(x)
