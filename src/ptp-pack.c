@@ -161,7 +161,7 @@ ptp_unpack_DI (PTPParams *params, char* data, PTPDeviceInfo *di)
 	uint8_t len;
 	unsigned int totallen;
 	
-	di->StaqndardVersion = dtoh16a(&data[PTP_di_StandardVersion]);
+	di->StandardVersion = dtoh16a(&data[PTP_di_StandardVersion]);
 	di->VendorExtensionID =
 		dtoh32a(&data[PTP_di_VendorExtensionID]);
 	di->VendorExtensionVersion =
