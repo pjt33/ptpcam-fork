@@ -58,7 +58,7 @@ int myusb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int length,
 }
 
 /* error reporting macro */
-#define ERROR(error) fprintf(stderr,"ERROR: "error);				
+#define ERROR(error) fprintf(stderr,"ERROR: "error);
 
 /* property value printing macros */
 #define PRINT_PROPVAL_DEC(value)	\
@@ -93,7 +93,7 @@ int myusb_bulk_write(usb_dev_handle *dev, int ep, char *bytes, int length,
 #define ACT_SHOW_ALL_PROPERTIES	0xE
 #define ACT_SHOW_UNKNOWN_PROPERTIES	0xF
 #define ACT_SET_PROPBYNAME	0x10
-#define ACT_GENERIC_REQ     0x11
+#define ACT_GENERIC_REQ 	0x11
 
 #define ACT_NIKON_DC		0x101
 #define ACT_NIKON_DC2		0x102
