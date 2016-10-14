@@ -97,6 +97,7 @@ int ptpcam_usb_timeout = USB_TIMEOUT;
 /* we need it for a proper signal handling :/ */
 PTPParams* globalparams;
 
+void getset_prop_array_internal(PTPParams* params, long property, const char* value, short force);
 
 void
 usage()
@@ -1776,6 +1777,44 @@ getset_property_internal (PTPParams* params, uint16_t property,const char* value
 	ptp_free_devicepropdesc(&dpd);
 }
 
+void getset_prop_array_internal(PTPParams* params, long property, const char* value, short force)
+{
+
+	if (property != -1L) { /* single property */
+		if (!ptp_property_issupported(params, property)&&!force) {
+			fprintf(stderr,"The device does not support this property:%04lX!\n", property);
+			return;
+		}
+		getset_property_internal(params, property, value, force);
+	}
+	else { /* array properties: value is "[NUMBER:VALUE,NUMBER:VALUE,...]" or "[NUMBER,NUMBER,...]"*/
+		char* token;
+		char* value_copy = strdup(value);
+		if (value_copy == NULL) {
+			perror("getset_prop_array_internal");
+			return;
+		}
+		/* get a token separated by "," or "]" */
+		for (token = strtok(value_copy+1, ",]"); token != NULL; token = strtok(NULL, ",]")) {
+			/* parse property-number and value from a token. The token is "NUMBER:VALUE" or "NUMBER" */
+			char* endp;
+			property = strtol(token, &endp, 16);
+			if (*endp == ':')
+				value = endp + 1;
+			else
+				value = NULL;
+
+			/* validate property and setget */
+			if (!ptp_property_issupported(params, property)&&!force) {
+				fprintf(stderr, "The device does not support this property:%04lX!\n", property);
+				continue;
+			}
+			getset_property_internal(params, property, value, force);
+		}/* end for */
+		free(value_copy);
+	}
+}
+
 void
 getset_propertybyname (int busn,int devn,char* property,char* value,short force);
 void
@@ -1844,9 +1883,9 @@ getset_propertybyname (int busn,int devn,char* property,char* value,short force)
 }
 
 void
-getset_property (int busn,int devn,uint16_t property,char* value,short force);
+getset_property (int busn, int devn, long property, const char* value, short force);
 void
-getset_property (int busn,int devn,uint16_t property,char* value,short force)
+getset_property (int busn, int devn, long property, const char* value, short force)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -1862,15 +1901,7 @@ getset_property (int busn,int devn,uint16_t property,char* value,short force)
 		printf(" (bus %i, dev %i)\n",busn,devn);
 	else
 		printf("\n");
-	if (!ptp_property_issupported(&params, property)&&!force)
-	{
-		fprintf(stderr,"The device does not support this property!\n");
-		close_camera(&ptp_usb, &params, dev);
-		return;
-	}
-
-	getset_property_internal (&params, property,value, force);
-
+	getset_prop_array_internal(&params, property, value, force);
 	close_camera(&ptp_usb, &params, dev);
 }
 
@@ -2174,7 +2205,7 @@ main(int argc, char ** argv)
 	int action=0;
 	short force=0;
 	int overwrite=SKIP_IF_EXISTS;
-	uint16_t property=0;
+	long property=0;
 	char* value=NULL;
 	char* propstr=NULL;
 	uint32_t handle=0;
@@ -2303,7 +2334,13 @@ main(int argc, char ** argv)
 			break;
 		case 's':
 			action=ACT_GETSET_PROPERTY;
-			property=strtol(optarg,NULL,16);
+			if (optarg[0] == '[') {
+				property=-1L;
+				value=strdup(optarg);	/* "[NUM1:VALUE1, NUM2:VALUE2, ....]" or "[NUM1, NUM2, ...]" */
+			}
+			else {
+				property=strtol(optarg,NULL,16);
+			}
 			break;
 		case 'o':
 			action=ACT_LIST_OPERATIONS;
