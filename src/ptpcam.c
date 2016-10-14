@@ -2187,6 +2187,7 @@ main(int argc, char ** argv)
 	char data_file[256];
 	/* parse options */
 	int option_index = 0,opt;
+	const char* option_name;
 	static struct option loptions[] = {
 		{"help",0,0,'h'},
 		{"bus",1,0,0},
@@ -2234,44 +2235,45 @@ main(int argc, char ** argv)
 		switch (opt) {
 		/* set parameters */
 		case 0:
-			if (!(strcmp("val",loptions[option_index].name)))
+			option_name = loptions[option_index].name;
+			if (!(strcmp("val",option_name)))
 				value=strdup(optarg);
-			if (!(strcmp("filename",loptions[option_index].name)))
+			if (!(strcmp("filename",option_name)))
 				filename=strdup(optarg);
-			if (!(strcmp("overwrite",loptions[option_index].name)))
+			if (!(strcmp("overwrite",option_name)))
 				overwrite=OVERWRITE_EXISTING;
-			if (!(strcmp("bus",loptions[option_index].name)))
+			if (!(strcmp("bus",option_name)))
 				busn=strtol(optarg,NULL,10);
-			if (!(strcmp("dev",loptions[option_index].name)))
+			if (!(strcmp("dev",option_name)))
 				devn=strtol(optarg,NULL,10);
-			if (!(strcmp("loop-capture",loptions[option_index].name)))
+			if (!(strcmp("loop-capture",option_name)))
 			{
 				action=ACT_LOOP_CAPTURE;
 				num=strtol(optarg,NULL,10);
 			}
-			if (!(strcmp("show-all-properties", loptions[option_index].name)))
+			if (!(strcmp("show-all-properties", option_name)))
 				action=ACT_SHOW_ALL_PROPERTIES;
-			if (!(strcmp("show-unknown-properties", loptions[option_index].name)))
+			if (!(strcmp("show-unknown-properties", option_name)))
 				action=ACT_SHOW_UNKNOWN_PROPERTIES;
-			if (!(strcmp("set",loptions[option_index].name)))
+			if (!(strcmp("set",option_name)))
 			{
 				propstr=strdup(optarg);
 				action=ACT_SET_PROPBYNAME;
 			}
-			if (!(strcmp("interval",loptions[option_index].name)))
+			if (!(strcmp("interval",option_name)))
 				interval=strtol(optarg,NULL,10);
-			if (!strcmp("nikon-dc", loptions[option_index].name) ||
-				!strcmp("ndc", loptions[option_index].name))
+			if (!strcmp("nikon-dc", option_name) ||
+				!strcmp("ndc", option_name))
 			{
 				action=ACT_NIKON_DC;
 			}
-			if (!strcmp("nikon-ic", loptions[option_index].name) ||
-					!strcmp("nic", loptions[option_index].name))
+			if (!strcmp("nikon-ic", option_name) ||
+					!strcmp("nic", option_name))
 			{
 				action=ACT_NIKON_IC;
 			}
-			if (!strcmp("nikon-dc2", loptions[option_index].name) ||
-				!strcmp("ndc2", loptions[option_index].name))
+			if (!strcmp("nikon-dc2", option_name) ||
+				!strcmp("ndc2", option_name))
 			{
 				action=ACT_NIKON_DC2;
 			}
