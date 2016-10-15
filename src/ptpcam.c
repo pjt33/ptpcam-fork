@@ -576,8 +576,21 @@ show_info (int busn, int devn, short force)
 	close_camera(&ptp_usb, &params, dev);
 }
 
+void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force);
+void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force)
+{
+	if (params->deviceinfo.VendorExtensionID==PTP_VENDOR_NIKON
+		 && ptp_operation_issupported(params, PTP_OC_NIKON_SetControlMode)) {
+		/* The property 0x500e(Exposure Program) is able to set only in a capture session with host PC mode. */
+		ptp_nikon_setcontrolmode(params, 1); /* 0:hostCamera, 1:hostPC */
+	}
+	/**@TODO: else if PTP_VENDOR_CANON etc... */
+
+	getset_prop_array_internal(params, property, value, force);
+}
+
 void
-capture_image (int busn, int devn, short force)
+capture_image (int busn, int devn, short force, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -589,13 +602,14 @@ capture_image (int busn, int devn, short force)
 	printf("\nInitiating captue...\n");
 	if (open_camera(busn, devn, force, &ptp_usb, &params, &dev)<0)
 		return;
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 
 	if (!ptp_operation_issupported(&params, PTP_OC_InitiateCapture))
 	{
 		printf ("Your camera does not support InitiateCapture operation!\nSorry, blame the %s!\n", params.deviceinfo.Manufacturer);
 		goto out;
 	}
-
 	/* obtain exposure time in miliseconds */
 	if (ptp_property_issupported(&params, PTP_DPC_ExposureTime))
 	{
@@ -638,7 +652,7 @@ out:
 }
 
 void
-capture_hdr_image (int busn, int devn, short force)
+capture_hdr_image (int busn, int devn, short force, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -654,6 +668,8 @@ capture_hdr_image (int busn, int devn, short force)
 	printf("\nInitiating capture...\n");
 	if (open_camera(busn, devn, force, &ptp_usb, &params, &dev)<0)
 		return;
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 
 	if (!ptp_operation_issupported(&params, PTP_OC_InitiateCapture))
 	{
@@ -756,7 +772,7 @@ static void sig_alrm(int signo)
 }
 
 void
-loop_capture (int busn, int devn, short force, int n, int interval, int overwrite)
+loop_capture (int busn, int devn, short force, int n, int interval, int overwrite, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -781,6 +797,8 @@ loop_capture (int busn, int devn, short force, int n, int interval, int overwrit
 	ptpcam_usb_timeout=USB_CAPTURE_TIMEOUT;
 
 	printf("Camera: %s\n",params.deviceinfo.Model);
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 
 	/* local loop */
 	while (n>0) {
@@ -875,9 +893,9 @@ err:
 }
 
 void
-nikon_initiate_dc (int busn, int devn, short force);
+nikon_initiate_dc (int busn, int devn, short force, long property, const char* value);
 void
-nikon_initiate_dc (int busn, int devn, short force)
+nikon_initiate_dc (int busn, int devn, short force, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -888,6 +906,8 @@ nikon_initiate_dc (int busn, int devn, short force)
 		return;
 
 	printf("Camera: %s\n",params.deviceinfo.Model);
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 	printf("\nInitiating direct captue...\n");
 
 	if (params.deviceinfo.VendorExtensionID!=PTP_VENDOR_NIKON)
@@ -918,7 +938,7 @@ out:
 }
 
 void
-nikon_direct_capture (int busn, int devn, short force, char* filename,int overwrite)
+nikon_direct_capture (int busn, int devn, short force, char* filename,int overwrite, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -936,6 +956,8 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 		return;
 
 	printf("Camera: %s\n",params.deviceinfo.Model);
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 
 	if ((result=ptp_getobjectinfo(&params,0xffff0001, &oi))==PTP_RC_OK) {
 		if (filename==NULL) filename=oi.Filename;
@@ -1052,7 +1074,7 @@ out:
 
 
 void
-nikon_direct_capture2 (int busn, int devn, short force, char* filename, int overwrite)
+nikon_direct_capture2 (int busn, int devn, short force, char* filename, int overwrite, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
@@ -1075,6 +1097,8 @@ nikon_direct_capture2 (int busn, int devn, short force, char* filename, int over
 		close_usb(&ptp_usb, dev);
 		return ;
 	}
+	if (property != 0 && value != NULL)
+		set_prop_array_in_capture(&params, property, value, force);
 /*
 	memset(&dpd,0,sizeof(dpd));
 	result=ptp_getdevicepropdesc(&params,PTP_DPC_BurstNumber,&dpd);
@@ -2431,10 +2455,10 @@ main(int argc, char ** argv)
 			get_all_files(busn,devn,force,overwrite);
 			break;
 		case ACT_CAPTURE:
-			capture_image(busn,devn,force);
+			capture_image(busn,devn,force,property,value);
 			break;
 		case ACT_HDR:
-			capture_hdr_image(busn,devn,force);
+			capture_hdr_image(busn,devn,force,property,value);
 			break;
 		case ACT_DELETE_OBJECT:
 			delete_object(busn,devn,force,handle);
@@ -2443,7 +2467,7 @@ main(int argc, char ** argv)
 			delete_all_files(busn,devn,force);
 			break;
 		case ACT_LOOP_CAPTURE:
-			loop_capture (busn,devn,force,num,interval, overwrite);
+			loop_capture(busn,devn,force,num,interval,overwrite,property,value);
 			break;
 		case ACT_SHOW_ALL_PROPERTIES:
 			show_all_properties(busn,devn,force,0);
@@ -2455,13 +2479,13 @@ main(int argc, char ** argv)
 			getset_propertybyname(busn,devn,propstr,value,force);
 			break;
 		case ACT_NIKON_DC:
-			nikon_direct_capture(busn,devn,force,filename,overwrite);
+			nikon_direct_capture(busn,devn,force,filename,overwrite,property,value);
 			break;
 		case ACT_NIKON_IC:
-			nikon_initiate_dc (busn,devn,force);
+			nikon_initiate_dc(busn,devn,force,property,value);
 			break;
 		case ACT_NIKON_DC2:
-			nikon_direct_capture2(busn,devn,force,filename,overwrite);
+			nikon_direct_capture2(busn,devn,force,filename,overwrite,property,value);
 	}
 
 	return 0;
