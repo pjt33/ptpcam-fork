@@ -154,7 +154,7 @@ void list_operations (int busn, int devn, short force);
 void list_devices(short force);
 void list_properties (int dev, int bus, short force);
 void loop_capture (int busn, int devn, short force, int n, int interval, int overwrite, long property, const char* value);
-void save_object(PTPParams *params, uint32_t handle, char* filename, PTPObjectInfo oi, int overwrite);
+int  save_object(PTPParams *params, uint32_t handle, char* filename, PTPObjectInfo oi, int overwrite);
 void get_save_object (PTPParams *params, uint32_t handle, char* filename, int overwrite);
 void send_generic_request (int busn, int devn, uint16_t reqCode, uint32_t *params, uint32_t direction, char *data_file);
 
