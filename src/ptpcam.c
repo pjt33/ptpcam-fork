@@ -577,8 +577,7 @@ show_info (int busn, int devn, short force)
 	close_camera(&ptp_usb, &params, dev);
 }
 
-void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force);
-void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force)
+static void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force)
 {
 	if (params->deviceinfo.VendorExtensionID==PTP_VENDOR_NIKON
 		 && ptp_operation_issupported(params, PTP_OC_NIKON_SetControlMode)) {
@@ -589,6 +588,13 @@ void set_prop_array_in_capture(PTPParams* params, long property, const char* val
 
 	if (property != 0 && value != NULL)
 		getset_prop_array_internal(params, property, value, force);
+}
+
+static void print_event_device_prop_changed(PTPParams* params, uint16_t property, short force)
+{
+	const char* name = ptp_prop_getname(params, property); if (!name) name="UNKNOWN";
+	printf("Event: DevicePropChanged 0x%04x: %s\n", property, name);
+//	getset_property_internal(&params, property, NULL, force);
 }
 
 void
@@ -1016,12 +1022,7 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 				if (verbose) printf("Event: 0x%04x,\t param: %08x\n", events[i].code ,events[i].param1);
 				break;
 			case PTP_EC_DevicePropChanged:
-				if (verbose) {
-					uint16_t property = events[i].param1;
-					const char* name = ptp_prop_getname(&params, property); if (!name) name="UNKNOWN";
-					printf("Event: DevicePropChanged 0x%04x: %s\n", property, name);
-//					getset_property_internal(&params, property, NULL, force);
-				}
+				if (verbose) print_event_device_prop_changed(&params, events[i].param1, force);
 				break;
 			case PTP_EC_Nikon_CaptureCompleteRecInSdram: /* aka. PTP_EC_NIKON_CaptureOverflow */
 				if (verbose) printf("Event: Nikon CaptureCompleteRecInSdram\n");
