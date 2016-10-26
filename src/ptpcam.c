@@ -879,7 +879,7 @@ download:
 out:
 		rest_time=interval-(time(NULL)-start_time);
 		if (rest_time>0 && n>0) {
-			printf("Sleeping for remaining %u seconds.\n",rest_time);
+			printf("Sleeping for remaining %lu seconds.\n",rest_time);
 			alarm(rest_time);
 			pause();
 		}
@@ -2162,6 +2162,8 @@ ptp_transaction_senddata (PTPParams* params, PTPContainer* ptp, unsigned int sen
 	return (ptp_transaction(params, ptp, PTP_DP_SENDDATA, sendlen, &data));
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
 void ptphack(void);
 void ptphack(void)
 {
@@ -2198,6 +2200,7 @@ void ptphack(void)
 
 	close_camera(&ptp_usb, &params, dev);
 }
+#pragma GCC diagnostic pop
 
 /* main program  */
 
