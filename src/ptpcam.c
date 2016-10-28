@@ -597,12 +597,43 @@ static void print_event_device_prop_changed(PTPParams* params, uint16_t property
 //	getset_property_internal(&params, property, NULL, force);
 }
 
+static int event_wait_capture_complete(PTPParams* params, short force)
+{
+	PTPContainer event;
+	size_t allocsize = 100;
+	size_t n = 0;
+	uint32_t* handler = malloc(allocsize * sizeof(handler[0]));
+	if (handler == NULL) {
+nomemory:
+		perror("ptpcam: no memory"); return -1;
+	}
+	do {
+		int ret = ptp_usb_event_wait(params,&event);
+		if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
+		if (ret != PTP_RC_OK) return ret;
+		if (event.Code==PTP_EC_DevicePropChanged) {
+			if (verbose) print_event_device_prop_changed(params, event.Param1, force);
+		}
+		else if (event.Code==PTP_EC_ObjectAdded) {
+			printf ("Object added 0x%08lx\n",(long unsigned) event.Param1);
+			if (n > allocsize) {
+				allocsize = n * 2;
+				handler = realloc(handler, allocsize * sizeof(handler[0]));
+				if (handler == NULL) goto nomemory;
+			}
+			handler[n++] = event.Param1;
+		}
+	} while (event.Code!=PTP_EC_CaptureComplete);
+	params->handles.n = n;
+	params->handles.Handler = handler;
+	return PTP_RC_OK;
+}
+
 void
 capture_image (int busn, int devn, short force, long property, const char* value)
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
-	PTPContainer event;
 	int ExposureTime=0;
 	struct usb_device *dev;
 	short ret;
@@ -631,24 +662,13 @@ capture_image (int busn, int devn, short force, long property, const char* value
 
 	CR(ptp_initiatecapture (&params, 0x0, 0), "Could not capture.\n");
 
-	ret=ptp_usb_event_wait(&params,&event);
-	if (ret!=PTP_RC_OK) goto err;
-	if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-	if (event.Code==PTP_EC_CaptureComplete) {
+	if (event_wait_capture_complete(&params, force) != PTP_RC_OK) goto err;
+	if (params.handles.n == 0) {
 		printf ("Camera reported 'capture completed' but the object information is missing.\n");
 		goto out;
 	}
-	
-	while (event.Code==PTP_EC_ObjectAdded) {
-		printf ("Object added 0x%08lx\n", (long unsigned) event.Param1);
-		if (ptp_usb_event_wait(&params, &event)!=PTP_RC_OK)
-			goto err;
-		if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-		if (event.Code==PTP_EC_CaptureComplete) {
-			printf ("Capture completed successfully!\n");
-			goto out;
-		}
-	}
+	printf ("Capture completed successfully!\n");
+	goto out;
 
 err:
 	printf("Events receiving error. Capture status unknown.\n");
@@ -663,7 +683,6 @@ capture_hdr_image (int busn, int devn, short force, long property, const char* v
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
-	PTPContainer event;
 	PTPDevicePropDesc dpdExposureComp;
 	int ExposureTime=0;
 	int16_t ExposureBiasCompensation;
@@ -733,29 +752,14 @@ capture_hdr_image (int busn, int devn, short force, long property, const char* v
 
 		CR(ptp_initiatecapture (&params, 0x0, 0), "Could not capture.\n");
 
-		ret=ptp_usb_event_wait(&params,&event);
-		if (ret!=PTP_RC_OK) goto err;
-		if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-		if (event.Code==PTP_EC_CaptureComplete) {
+
+		if (event_wait_capture_complete(&params, force) != PTP_RC_OK) goto err;
+		if (params.handles.n == 0) {
 			printf ("Camera reported 'capture completed' but the object information is missing.\n");
 			goto out;
 		}
-
-		while (event.Code==PTP_EC_ObjectAdded) {
-			printf ("Object added 0x%08lx\n", (long unsigned) event.Param1);
-			if (ptp_usb_event_wait(&params, &event)!=PTP_RC_OK)
-			{
-				printf ("Error waiting for event. Capture status unknown.\n");
-				break;
-			}
-			if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-			if (event.Code==PTP_EC_CaptureComplete) {
-				printf ("Capture completed successfully!\n");
-				break;
-			}
-		}
+		printf ("Capture completed successfully!\n");
 	}
-
 	goto out;
 
 err:
@@ -782,14 +786,7 @@ loop_capture (int busn, int devn, short force, int n, int interval, int overwrit
 {
 	PTPParams params;
 	PTP_USB ptp_usb;
-	PTPContainer event;
 	struct usb_device *dev;
-	int file;
-	PTPObjectInfo oi;
-	uint32_t handle=0;
-	char *image;
-	int ret;
-	char *filename;
 	time_t start_time;
 	time_t rest_time;
 
@@ -813,74 +810,14 @@ loop_capture (int busn, int devn, short force, int n, int interval, int overwrit
 		CR(ptp_initiatecapture (&params, 0x0, 0),"Could not capture\n");
 		n--;
 
-		ret=ptp_usb_event_wait(&params,&event);
-		if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-		if (ret!=PTP_RC_OK) goto err;
-		if (event.Code==PTP_EC_CaptureComplete) {
+		if (event_wait_capture_complete(&params, force) != PTP_RC_OK) goto err;
+		if (params.handles.n == 0) {
 			printf ("CANNOT DOWNLOAD: got 'capture completed' but the object information is missing.\n");
 			goto out;
 		}
-		
-		while (event.Code==PTP_EC_ObjectAdded) {
-			printf ("Object added 0x%08lx\n",(long unsigned) event.Param1);
-			handle=event.Param1;
-			if (ptp_usb_event_wait(&params, &event)!=PTP_RC_OK)
-				goto err;
-			if (verbose) printf ("Event received %08x, ret=%x\n", event.Code, ret);
-			if (event.Code==PTP_EC_CaptureComplete)
-				goto download;
-		}
-download:
-
-		memset(&oi, 0, sizeof(PTPObjectInfo));
-		if (verbose) printf ("Downloading: 0x%08lx\n",(long unsigned) handle);
-		if ((ret=ptp_getobjectinfo(&params,handle, &oi))!=PTP_RC_OK){
-			fprintf(stderr,"ERROR: Could not get object info\n");
-			ptp_perror(&params,ret);
-			if (ret==PTP_ERROR_IO) clear_stall(&ptp_usb);
-			continue;
-		}
-
-		if (oi.ObjectFormat == PTP_OFC_Association)
-				goto out;
-		filename=(oi.Filename);
-		file=open(filename, (overwrite==OVERWRITE_EXISTING?0:O_EXCL)|O_RDWR|O_CREAT|O_TRUNC,S_IRWXU|S_IRGRP);
-		if (file==-1) {
-			if (errno==EEXIST) {
-				printf("Skipping file: \"%s\", file exists!\n",filename);
-				goto out;
-			}
-			perror("open");
-			goto out;
-		}
-		lseek(file,oi.ObjectCompressedSize-1,SEEK_SET);
-		ret=write(file,"",1);
-		if (ret==-1) {
-			perror("write");
-			goto out;
-		}
-		image=mmap(0,oi.ObjectCompressedSize,PROT_READ|PROT_WRITE,MAP_SHARED,
-			file,0);
-		if (image==MAP_FAILED) {
-			perror("mmap");
-			close(file);
-			goto out;
-		}
-		printf ("Saving file: \"%s\" ",filename);
-		fflush(NULL);
-		ret=ptp_getobject(&params,handle,&image);
-		munmap(image,oi.ObjectCompressedSize);
-		close(file);
-		if (ret!=PTP_RC_OK) {
-			printf ("error!\n");
-			ptp_perror(&params,ret);
-			if (ret==PTP_ERROR_IO) clear_stall(&ptp_usb);
-		} else {
-			/* and delete from camera! */
-			printf("is done...\nDeleting from camera.\n");
-			CR(ptp_deleteobject(&params, handle,0),
-					"Could not delete object\n");
-			printf("Object 0x%08lx (%s) deleted.\n",(long unsigned) handle, oi.Filename);
+		int i;
+		for (i = 0; i < params.handles.n; ++i) {
+			get_save_object(&params, params.handles.Handler[i], NULL, overwrite, 1); /* save as filename given from camera, and deleteobject */
 		}
 out:
 		rest_time=interval-(time(NULL)-start_time);
@@ -985,7 +922,7 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 		}
 	}
 
-	printf("\nInitiating direct capture...\n");
+	printf("\nInitiating direct captue...\n");
 
 	if (params.deviceinfo.VendorExtensionID!=PTP_VENDOR_NIKON)
 	{
@@ -1365,8 +1302,8 @@ save_object(PTPParams *params, uint32_t handle, char* filename, const PTPObjectI
 				fprintf(stderr, "ERROR: Could not delete object\n");
 				ptp_perror(params,ret);
 			}
-//			else
-//				printf("Object 0x%08lx (%s) deleted.\n",(long unsigned) handle, oi->Filename);
+			else
+				printf("Object 0x%08lx (%s) deleted.\n",(long unsigned) handle, oi->Filename);
 		}
 	}
 	return ret;
