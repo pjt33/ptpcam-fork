@@ -1040,7 +1040,7 @@ obj_added:
 						ptp_perror(&params,result);
 						goto out;
 					}
-					error = save_object(&params, handle, (filename ? filename : oi.Filename), oi, overwrite);
+					error = save_object(&params, handle, (filename ? filename : oi.Filename), &oi, overwrite, 0) != PTP_RC_OK;
 				}
 				break;
 			}/* end switch event code */
@@ -1114,7 +1114,7 @@ nikon_direct_capture2 (int busn, int devn, short force, char* filename, int over
 loop:
 	if ((result=ptp_getobjectinfo(&params,0xffff0001, &oi))==PTP_RC_OK) {
 		if (filename==NULL) filename=oi.Filename;
-		save_object(&params, 0xffff0001, filename, oi, overwrite);
+		save_object(&params, 0xffff0001, filename, &oi, overwrite, 0);
 	} else {
 		ptp_nikon_keepalive(&params);
 		goto loop;
@@ -1206,7 +1206,7 @@ loop:
 					goto out;
 				}
 				if (filename==NULL) filename=oi.Filename;
-				save_object(&params, 0xffff0001, filename, oi, overwrite);
+				save_object(&params, 0xffff0001, filename, &oi, overwrite, 0);
 			}
 			if (events[i].code==PTP_EC_NIKON_CaptureOverflow) {
 				printf("Ram cache overflow, capture terminated\n");
@@ -1312,7 +1312,7 @@ delete_all_files (int busn, int devn, short force)
 }
 
 int
-save_object(PTPParams *params, uint32_t handle, char* filename, PTPObjectInfo oi, int overwrite)
+save_object(PTPParams *params, uint32_t handle, char* filename, const PTPObjectInfo* oi, int overwrite, int deleteobject)
 {
 	int file;
 	char *image;
@@ -1323,33 +1323,33 @@ save_object(PTPParams *params, uint32_t handle, char* filename, PTPObjectInfo oi
 	if (file==-1) {
 		if (errno==EEXIST) {
 			printf("Skipping file: \"%s\", file exists!\n",filename);
-			goto err;
+			goto out;
 		}
 		perror("open");
-		goto err;
+		goto out;
 	}
-	lseek(file,oi.ObjectCompressedSize-1,SEEK_SET);
+	lseek(file,oi->ObjectCompressedSize-1,SEEK_SET);
 	ret=write(file,"",1);
 	if (ret==-1) {
 		perror("write");
-		goto err;
+		goto out;
 	}
-	image=mmap(0,oi.ObjectCompressedSize,PROT_READ|PROT_WRITE,MAP_SHARED,
+	image=mmap(0,oi->ObjectCompressedSize,PROT_READ|PROT_WRITE,MAP_SHARED,
 		file,0);
 	if (image==MAP_FAILED) {
 		perror("mmap");
 		close(file);
-		goto err;
+		goto out;
 	}
 	printf ("Saving file: \"%s\" ",filename);
 	fflush(NULL);
 	ret=ptp_getobject(params,handle,&image);
-	munmap(image,oi.ObjectCompressedSize);
+	munmap(image,oi->ObjectCompressedSize);
 	if (close(file)==-1) {
 		perror("close");
 	}
-	timebuf.actime=oi.ModificationDate;
-	timebuf.modtime=oi.CaptureDate;
+	timebuf.actime=oi->ModificationDate;
+	timebuf.modtime=oi->CaptureDate;
 	utime(filename,&timebuf);
 	if (ret!=PTP_RC_OK) {
 		printf ("error!\n");
@@ -1357,14 +1357,25 @@ save_object(PTPParams *params, uint32_t handle, char* filename, PTPObjectInfo oi
 		if (ret==PTP_ERROR_IO) clear_stall((PTP_USB *)(params->data));
 	} else {
 		printf("is done.\n");
-		return 0; /* success */
+		if (deleteobject!=0) {
+			/* delete from camera */
+			printf("Deleting from camera.\n");
+			ret=ptp_deleteobject(params,handle,0);
+			if (ret!=PTP_RC_OK) {
+				fprintf(stderr, "ERROR: Could not delete object\n");
+				ptp_perror(params,ret);
+			}
+//			else
+//				printf("Object 0x%08lx (%s) deleted.\n",(long unsigned) handle, oi->Filename);
+		}
 	}
-err:
-	return -1; /* some error */
+	return ret;
+out:
+	return -1; /* file io error */
 }
 
-void
-get_save_object (PTPParams *params, uint32_t handle, char* filename, int overwrite)
+int
+get_save_object (PTPParams *params, uint32_t handle, char* filename, int overwrite, int deleteobject)
 {
 
 	PTPObjectInfo oi;
@@ -1377,15 +1388,13 @@ get_save_object (PTPParams *params, uint32_t handle, char* filename, int overwri
 		fprintf(stderr, "Could not get object info\n");
 		ptp_perror(params,ret);
 		if (ret==PTP_ERROR_IO) clear_stall((PTP_USB *)(params->data));
-		goto out;
+		return ret;
 	}
 	if (oi.ObjectFormat == PTP_OFC_Association)
-		goto out;
+		return PTP_RC_OK;
 	if (filename==NULL) filename=(oi.Filename);
 
-	save_object(params, handle, filename, oi, overwrite);
-out:
-	return;
+	return save_object(params, handle, filename, &oi, overwrite, deleteobject);
 
 }
 
@@ -1401,7 +1410,7 @@ int overwrite)
 		return;
 	printf("Camera: %s\n",params.deviceinfo.Model);
 
-	get_save_object(&params, handle, filename, overwrite);
+	get_save_object(&params, handle, filename, overwrite, 0);
 
 	close_camera(&ptp_usb, &params, dev);
 
@@ -1423,8 +1432,7 @@ get_all_files (int busn, int devn, short force, int overwrite)
 		&params.handles),"Could not get object handles\n");
 
 	for (i=0; i<params.handles.n; i++) {
-		get_save_object (&params, params.handles.Handler[i], NULL,
-			overwrite);
+		get_save_object (&params, params.handles.Handler[i], NULL, overwrite, 0);
 	}
 	close_camera(&ptp_usb, &params, dev);
 }
