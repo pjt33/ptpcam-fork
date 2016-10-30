@@ -820,9 +820,13 @@ loop_capture (int busn, int devn, short force, int n, int interval, int overwrit
 			goto out;
 		}
 		int i;
+		int error=0;
 		for (i = 0; i < params.handles.n; ++i) {
-			get_save_object(&params, params.handles.Handler[i], NULL, overwrite, 1); /* save as filename given from camera, and deleteobject */
+			/* save as filename given from camera, and deleteobject */
+			int ret = get_save_object(&params, params.handles.Handler[i], NULL, overwrite, 1);
+			if (ret != PTP_RC_OK && ret != -1) error = 1; /* ignore file io error */
 		}
+		if (error) goto err;
 out:
 		rest_time=interval-(time(NULL)-start_time);
 		if (rest_time>0 && n>0) {
@@ -830,7 +834,6 @@ out:
 			alarm(rest_time);
 			pause();
 		}
-		;
 	}
 err:
 
@@ -904,7 +907,6 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 	uint16_t nevent=0;
 	PTPUSBEventContainer* events=NULL;
 	uint32_t handle=0;
-	PTPObjectInfo oi;
 	int complete=0;
 	int error=0;
 	int i;
@@ -975,14 +977,7 @@ obj_added:
 				complete = 0;
 				handle = events[i].param1;
 				if (handle == 0) handle = 0xffff0001; /* for old Nikon */
-				if (events[i].code==PTP_EC_NIKON_ObjectReady) {
-					if ((result=ptp_getobjectinfo(&params, handle, &oi))!=PTP_RC_OK) {
-						fprintf(stderr, "Could not get object info\n");
-						ptp_perror(&params,result);
-						goto out;
-					}
-					error = save_object(&params, handle, (filename ? filename : oi.Filename), &oi, overwrite, 0) != PTP_RC_OK;
-				}
+				if (get_save_object(&params, handle, filename, overwrite, 0) != PTP_RC_OK) error = 1;
 				break;
 			}/* end switch event code */
 		}/* end for nevent */
