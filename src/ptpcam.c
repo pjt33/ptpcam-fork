@@ -830,7 +830,7 @@ loop_capture (int busn, int devn, short force, int n, int interval, int overwrit
 out:
 		rest_time=interval-(time(NULL)-start_time);
 		if (rest_time>0 && n>0) {
-			printf("Sleeping for remaining %lu seconds.\n",rest_time);
+			printf("Sleeping for remaining %lu seconds.\n",(long unsigned) rest_time);
 			alarm(rest_time);
 			pause();
 		}
