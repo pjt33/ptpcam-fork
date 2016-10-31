@@ -12,5 +12,3 @@ Makefile
 Makefile.in
 stamp-h*
 compile
-*.JPG
-*.jpg
