@@ -2177,7 +2177,7 @@ main(int argc, char ** argv)
 		{"reset",0,0,'r'},
 		{"list-devices",0,0,'l'},
 		{"list-files",0,0,'L'},
-		{"list-operations",1,0,'o'},
+		{"list-operations",0,0,'o'},
 		{"list-properties",0,0,'p'},
 		{"show-all-properties",0,0,0},
 		{"show-unknown-properties",0,0,0},
