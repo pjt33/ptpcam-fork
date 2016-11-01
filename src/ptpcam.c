@@ -948,8 +948,12 @@ nikon_direct_capture (int busn, int devn, short force, char* filename,int overwr
 		fprintf(stderr,"ERROR: Could not capture.\n");
 		goto out;
 	}
-	nikon_wait_until_no_busy(&params); /* wait until exposure (ExposureTime x BurstNumber) */
-
+	result=nikon_wait_until_no_busy(&params); /* wait until exposure (ExposureTime x BurstNumber) */
+	if (result!=PTP_RC_OK) { /* PTP_RC_NIKON_OutOfFocus ...etc */
+		ptp_perror(&params,result);
+		fprintf(stderr,"ERROR: Could not have captured.\n");
+		goto out;
+	}
 	while (!complete && !error) {
 //		nikon_wait_until_no_busy(&params);
 		result=ptp_nikon_checkevent (&params, &events, &nevent);
