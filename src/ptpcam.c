@@ -583,15 +583,19 @@ show_info (int busn, int devn, short force)
 
 static void set_prop_array_in_capture(PTPParams* params, long property, const char* value, short force)
 {
+	if (property == 0 || value == NULL) return;
+
 	if (params->deviceinfo.VendorExtensionID==PTP_VENDOR_NIKON
 		 && ptp_operation_issupported(params, PTP_OC_NIKON_SetControlMode)) {
-		/* The property 0x500e(Exposure Program) is able to set only in a capture session with host PC mode. */
+		/* The property 0x500e(Exposure Program) is able to set only in host PC mode, Otherwise the value is read-only as Camara-dial-setting.
+		 * On D5500, the host PC mode is reset at closing capture session. So that the value of property 0x500e is reset after the session.
+		 * On D50/D5000, the host PC mode is not reset until Camera-power-off or calling ptp_nikon_setcontrolmode(params,0).
+		 */
 		ptp_nikon_setcontrolmode(params, 1); /* 0:CameraMode, 1:HostPCMode */
 	}
 	/**@TODO: else if PTP_VENDOR_CANON etc... */
 
-	if (property != 0 && value != NULL)
-		getset_prop_array_internal(params, property, value, force);
+	getset_prop_array_internal(params, property, value, force);
 }
 
 static void print_event_device_prop_changed(PTPParams* params, uint16_t property, short force)
