@@ -50,7 +50,7 @@ struct _PTPContainer {
 typedef struct _PTPContainer PTPContainer;
 
 /* PTP USB Bulk-Pipe container */
-/* USB bulk max max packet length for high speed endpoints */
+/* USB bulk max packet length for high speed endpoints */
 #define PTP_USB_BULK_HS_MAX_PACKET_LEN	512
 #define PTP_USB_BULK_HDR_LEN		(2*sizeof(uint32_t)+2*sizeof(uint16_t))
 #define PTP_USB_BULK_PAYLOAD_LEN	(PTP_USB_BULK_HS_MAX_PACKET_LEN-PTP_USB_BULK_HDR_LEN)
@@ -178,11 +178,31 @@ typedef struct _PTPUSBEventContainer PTPUSBEventContainer;
 #define	PTP_OC_MTP_SetObjectReferences		0x9811
 #define	PTP_OC_MTP_UpdateDeviceFirmware		0x9812
 #define	PTP_OC_MTP_Skip			0x9820
-/* Nikon extensiion Operation Codes */
+/* Nikon extension Operation Codes */
+#define PTP_OC_NIKON_GetProfileAllData	0x9006
+#define PTP_OC_NIKON_SendProfileData	0x9007
+#define PTP_OC_NIKON_DeleteProfile	0x9008
+#define PTP_OC_NIKON_SetProfileData	0x9009
+#define PTP_OC_NIKON_AdvancedTransfer	0x9010
+#define PTP_OC_NIKON_GetFileInfoInBlock	0x9011
 #define PTP_OC_NIKON_DirectCapture	0x90C0
-#define PTP_OC_NIKON_SetControlMode	0x90C2
-#define PTP_OC_NIKON_CheckEvent		0x90C7
+#define PTP_OC_NIKON_Capture		0x90C0	/* 1 param,   no data */
+#define PTP_OC_NIKON_AfDrive		0x90C1	/* no params, no data */
+#define PTP_OC_NIKON_SetControlMode	0x90C2	/* 1 param,  no data */
+#define PTP_OC_NIKON_DelImageSDRAM	0x90C3	/* 1 param,  no data */
+#define PTP_OC_NIKON_GetLargeThumb	0x90C4
+#define PTP_OC_NIKON_CurveDownload	0x90C5	/* 1 param,   data in */
+#define PTP_OC_NIKON_CurveUpload	0x90C6	/* 1 param,   data out */
+#define PTP_OC_NIKON_CheckEvent		0x90C7	/* no params, data in */
 #define PTP_OC_NIKON_KeepAlive		0x90C8
+#define PTP_OC_NIKON_DeviceReady	0x90C8	/* no params, no data */
+#define PTP_OC_NIKON_SetPreWBData	0x90C9	/* 3 params,  data out */
+#define PTP_OC_NIKON_GetVendorPropCodes	0x90CA	/* 0 params, data in */
+#define PTP_OC_NIKON_AfCaptureSDRAM	0x90CB	/* no params, no data */
+#define PTP_OC_NIKON_GetPictCtrlData	0x90CC	/* 2 params, data in */
+#define PTP_OC_NIKON_SetPictCtrlData	0x90CD	/* 2 params, data out */
+#define PTP_OC_NIKON_DelCstPicCtrl	0x90CE	/* 1 param, no data */
+#define PTP_OC_NIKON_GetPicCtrlCapability	0x90CF	/* 1 param, data in */
 
 /* Proprietary vendor extension operations mask */
 #define PTP_OC_EXTENSION_MASK		0xF000
@@ -228,8 +248,22 @@ typedef struct _PTPUSBEventContainer PTPUSBEventContainer;
 #define PTP_RC_EK_FilenameConflicts	0xA002
 #define PTP_RC_EK_FilenameInvalid	0xA003
 
-/* NIKON extension Response Codes */
+/* Nikon specific response codes */
+#define PTP_RC_NIKON_HardwareError		0xA001
+#define PTP_RC_NIKON_OutOfFocus			0xA002
+#define PTP_RC_NIKON_ChangeCameraModeFailed	0xA003
+#define PTP_RC_NIKON_InvalidStatus		0xA004
 #define PTP_RC_NIKON_PropertyReadOnly	0xA005
+#define PTP_RC_NIKON_SetPropertyNotSupported	0xA005
+#define PTP_RC_NIKON_WbResetError		0xA006
+#define PTP_RC_NIKON_DustReferenceError		0xA007
+#define PTP_RC_NIKON_ShutterSpeedBulb		0xA008
+#define PTP_RC_NIKON_MirrorUpSequence		0xA009
+#define PTP_RC_NIKON_CameraModeNotAdjustFNumber	0xA00A
+#define PTP_RC_NIKON_NotLiveView		0xA00B
+#define PTP_RC_NIKON_MfDriveStepEnd		0xA00C
+#define PTP_RC_NIKON_MfDriveStepInsufficiency	0xA00E
+#define PTP_RC_NIKON_AdvancedTransferCancel	0xA022
 
 /* Proprietary vendor extension response code mask */
 #define PTP_RC_EXTENSION_MASK		0xF000
@@ -266,11 +300,16 @@ typedef struct _PTPUSBEventContainer PTPUSBEventContainer;
 /* Nikon extension Event Codes */
 #define PTP_EC_NIKON_ObjectReady	0xC101
 #define PTP_EC_NIKON_CaptureOverflow	0xC102
+#define PTP_EC_Nikon_ObjectAddedInSDRAM		0xC101
+#define PTP_EC_Nikon_CaptureCompleteRecInSdram	0xC102
+/* Gets 1 parameter, objectid pointing to DPOF object */
+#define PTP_EC_Nikon_AdvancedTransfer		0xC103
+#define PTP_EC_Nikon_PreviewImageAdded		0xC104
 
 /* PTP device info structure (returned by GetDevInfo) */
 
 struct _PTPDeviceInfo {
-	uint16_t StaqndardVersion;
+	uint16_t StandardVersion;
 	uint32_t VendorExtensionID;
 	uint16_t VendorExtensionVersion;
 	char	*VendorExtensionDesc;
@@ -473,7 +512,7 @@ struct _PTPCANONFolderEntry {
 	uint8_t		Flags;
 	uint32_t	ObjectSize;
 	time_t		Time;
-    char     Filename[PTP_CANON_FilenameBufferLen];
+	char		Filename[PTP_CANON_FilenameBufferLen];
 };
 typedef struct _PTPCANONFolderEntry PTPCANONFolderEntry;
 
@@ -642,7 +681,7 @@ typedef struct _PTPCANONFolderEntry PTPCANONFolderEntry;
 #define PTP_DPC_NIKON_E3AAFlashMode			0xD076
 #define PTP_DPC_NIKON_E4ModelingFlash			0xD077
 #define PTP_DPC_NIKON_BracketSet			0xD078
-#define PTP_DPC_NIKON_E6ManualModeBracketing		0xD079	
+#define PTP_DPC_NIKON_E6ManualModeBracketing		0xD079
 #define PTP_DPC_NIKON_BracketOrder			0xD07A
 #define PTP_DPC_NIKON_E8AutoBracketSelection		0xD07B
 #define PTP_DPC_NIKON_BracketingSet			0xD07C
@@ -796,16 +835,19 @@ struct _PTPParams {
 };
 
 /* last, but not least - ptp functions */
+uint16_t ptp_transaction (PTPParams* params, PTPContainer* ptp,
+			uint16_t flags, unsigned int sendlen, char** data);
 uint16_t ptp_usb_sendreq	(PTPParams* params, PTPContainer* req);
 uint16_t ptp_usb_senddata	(PTPParams* params, PTPContainer* ptp,
 				unsigned char *data, unsigned int size);
 uint16_t ptp_usb_getresp	(PTPParams* params, PTPContainer* resp);
-uint16_t ptp_usb_getdata	(PTPParams* params, PTPContainer* ptp,  
+uint16_t ptp_usb_getdata	(PTPParams* params, PTPContainer* ptp,
 				unsigned int *getlen, unsigned char **data);
 uint16_t ptp_usb_event_check	(PTPParams* params, PTPContainer* event);
 uint16_t ptp_usb_event_wait		(PTPParams* params, PTPContainer* event);
 
 uint16_t ptp_getdeviceinfo	(PTPParams* params, PTPDeviceInfo* deviceinfo);
+uint16_t ptp_fixup_deviceinfo (PTPParams* params, PTPDeviceInfo* deviceinfo, int idVendor);
 
 uint16_t ptp_opensession	(PTPParams *params, uint32_t session);
 uint16_t ptp_closesession	(PTPParams *params);
@@ -857,7 +899,7 @@ uint16_t ptp_ek_sendfileobjectinfo (PTPParams* params, uint32_t* store,
 				PTPObjectInfo* objectinfo);
 uint16_t ptp_ek_sendfileobject	(PTPParams* params, char* object,
 				uint32_t size);
-				
+
 /* Canon PTP extensions */
 
 uint16_t ptp_canon_getobjectsize (PTPParams* params, uint32_t handle,
@@ -870,22 +912,22 @@ uint16_t ptp_canon_viewfinderon (PTPParams* params);
 uint16_t ptp_canon_viewfinderoff (PTPParams* params);
 
 uint16_t ptp_canon_reflectchanges (PTPParams* params, uint32_t p1);
-uint16_t ptp_canon_checkevent (PTPParams* params, 
+uint16_t ptp_canon_checkevent (PTPParams* params,
 				PTPUSBEventContainer* event, int* isevent);
 uint16_t ptp_canon_focuslock (PTPParams* params);
 uint16_t ptp_canon_focusunlock (PTPParams* params);
 uint16_t ptp_canon_initiatecaptureinmemory (PTPParams* params);
-uint16_t ptp_canon_getpartialobject (PTPParams* params, uint32_t handle, 
+uint16_t ptp_canon_getpartialobject (PTPParams* params, uint32_t handle,
 				uint32_t offset, uint32_t size,
-				uint32_t pos, char** block, 
+				uint32_t pos, char** block,
 				uint32_t* readnum);
 uint16_t ptp_canon_getviewfinderimage (PTPParams* params, char** image,
 				uint32_t* size);
 uint16_t ptp_canon_getchanges (PTPParams* params, uint16_t** props,
-				uint32_t* propnum); 
+				uint32_t* propnum);
 uint16_t ptp_canon_getfolderentries (PTPParams* params, uint32_t store,
 				uint32_t p2, uint32_t parenthandle,
-				uint32_t handle, 
+				uint32_t handle,
 				PTPCANONFolderEntry** entries,
 				uint32_t* entnum);
 
@@ -895,6 +937,7 @@ uint16_t ptp_nikon_directcapture (PTPParams* params, uint32_t unknown);
 uint16_t ptp_nikon_checkevent (PTPParams* params,
 				PTPUSBEventContainer** event, uint16_t* evnum);
 uint16_t ptp_nikon_keepalive (PTPParams* params);
+uint16_t ptp_nikon_get_vendorpropcodes (PTPParams* params, uint16_t **props, unsigned int *size);
 
 
 /* Non PTP protocol functions */
